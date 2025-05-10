@@ -1,0 +1,103 @@
+/* 1. Import the variable-font from Google */
+@import url('https://fonts.googleapis.com/css2?family=Satoshi:opsz,wght@8..144,100..900&display=swap');
+
+/* 2. Then pull in Tailwind */
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* set your “sans” variable to Satoshi */
+  --font-sans: 'Satoshi', sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* point Tailwind’s sans to your new variable */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* use your “sans” var here */
+  font-family: var(--font-sans);
+  /* pick a default weight from the variable font */
+  font-variation-settings: 'wght' 400;
+}
+
+@layer components {
+  .section-width {
+    @apply xl:max-w-screen-2xl md:w-5/6 mx-auto items-center;
+  }
+  .section-padding {
+    @apply py-14 md:py-16 lg:py-20;
+  }
+  .padding-top {
+    @apply pt-14 md:pt-20 lg:pt-24;
+  }
+  .padding-bottom {
+    @apply pb-14 md:pb-20 lg:pb-24;
+  }
+  .margin-top {
+    @apply mt-14 md:mt-20 lg:mt-24;
+  }
+  .margin-bottom {
+    @apply mb-14 md:mb-20 lg:mb-24;
+  }
+  .btn-primary {
+    @apply px-4 py-2 md:px-6 md:py-3 rounded-lg bg-[#E07E27]   text-white text-sm md:text-base text-center cursor-pointer;
+  }
+  .btn-secondary {
+    @apply px-6 py-3 rounded-full border-2 border-white bg-white text-blue-600 font-medium text-base;
+  }
+  .btn-black {
+    @apply inline-block px-6 py-2 rounded-full bg-black text-white text-sm md:text-base;
+  }
+  .sub-heading {
+    @apply text-red-600 text-sm lg:text-base xl:text-lg font-normal;
+  }
+  .section-width2 {
+    @apply w-full max-w-screen-xl mx-auto px-4;
+  }
+}
+
+
+@layer base {
+  h1 {
+    @apply 2xl:text-[74px] xl:text-[64px] lg:text-[58px] md:text-[46px] text-4xl  md:tracking-[-1.92px] tracking-[-0.96px] leading-tight xl:leading-tight font-semibold 2xl:leading-tight;
+  }
+
+  h2 {
+    @apply 2xl:text-[40px] xl:text-[36px] lg:text-[32px] md:text-[28px] text-2xl md:tracking-[-0.96px] font-semibold 2xl:leading-tight;
+  }
+
+  h3 {
+    @apply 2xl:text-4xl xl:text-3xl lg:text-2xl md:text-2xl text-xl md:tracking-[-1.28px] tracking-[-0.64px] font-bold 2xl:leading-[120%];
+  }
+
+  h4 {
+    @apply 2xl:text-2xl md:text-xl text-lg font-semibold xl:leading-tight md:leading-tight leading-tight;
+  }
+
+  h5 {
+    @apply md:text-2xl text-xl font-medium leading-tight;
+  }
+
+  h6 {
+    @apply lg:text-xl md:text-lg text-base font-semibold leading-[110%];
+  }
+
+  p {
+    @apply  xl:text-lg md:text-base sm:text-sm text-xs font-medium leading-relaxed;
+  }
+}
