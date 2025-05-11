@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { SignedIn, SignedOut } from '@clerk/nextjs';
 
 export default function CtaSection() {
   return (
@@ -14,9 +15,11 @@ export default function CtaSection() {
           You don’t need to have it all figured out. You just need to start showing up for yourself—one step at a time.
         </p>
         <div className="mt-8 flex items-center justify-center">
-        <Link
-            href="/sign-in"
-            className="
+          <SignedOut>
+
+            <Link
+              href="/sign-in"
+              className="
               block w-fit sm:w-fit 
                py-2 px-4 
               bg-white border border-gray-300 text-black font-medium 
@@ -25,9 +28,30 @@ export default function CtaSection() {
               hover:bg-[#f0f0f0]
               text-center
             "
-          >
-            Join the community
-          </Link>
+            >
+              Join the community
+            </Link>
+          </SignedOut>
+
+
+          <SignedIn>
+
+            <Link
+              href="/dashBoard"
+              className="
+  block w-fit sm:w-fit 
+   py-2 px-4 
+  bg-white border border-gray-300 text-black font-medium 
+  rounded-lg 
+  shadow-inner shadow-[#d1d5db] 
+  hover:bg-[#f0f0f0]
+  text-center
+"
+            >
+              Go to Dashboard
+            </Link>
+          </SignedIn>
+
         </div>
       </div>
     </section>

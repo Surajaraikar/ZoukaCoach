@@ -57,16 +57,17 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideNav = ['/sign-in', '/sign-up', '/sign-in/factor-one'].includes(pathname);
+  const isDashboard = pathname === '/dashBoard' || pathname.startsWith('/dashBoard/');
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          {/* only render when NOT on sign-in or sign-up */}
-          {!hideNav && (
+          {/* only render when NOT on sign-in or sign-up or dashboard */}
+          {!hideNav && !isDashboard && (
             <div className="border-b-2 ">
-              <header className="section-width mx-auto flex items-center justify-between p-4 h-20 ">
+              <header className="xl:max-w-screen-2xl md:w-5/6 mx-auto flex items-center justify-between h-28 ">
                 {/* Logo */}
                 <Link href="/">
                   <Image
@@ -108,7 +109,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       Dashboard
                     </Link>
                   </SignedIn>
-
+                  <SignedIn>
+              <UserButton />
+            </SignedIn>
                   <SignedOut>
                     <Link
                       href="/sign-in"
@@ -123,12 +126,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       Book a free session
                     </Link>
                   </SignedOut>
-
-                  <SignedIn>
-                    <div className="flex justify-center md:block">
-                      <UserButton />
-                    </div>
-                  </SignedIn>
                 </nav>
               </header>
             </div>

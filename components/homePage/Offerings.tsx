@@ -1,8 +1,8 @@
 // app/components/Offerings.tsx
 "use client";
-
 import React from 'react';
 import Link from 'next/link';
+import { SignedIn, SignedOut } from '@clerk/nextjs';
 
 export default function Offerings() {
   const offerings = [
@@ -36,31 +36,43 @@ export default function Offerings() {
           <div>
             <span className="text-sm text-[#6941C6] font-medium">What we offer</span>
             <h2 className="mt-2 text-black">
-            Your weekly anchor for clarity &amp; momentum
+              Your weekly anchor for clarity &amp; momentum
             </h2>
             <p className="mt-4 text-[#535862] ">
-            Our offerings are designed to meet you where you are and gently move you
+              Our offerings are designed to meet you where you are and gently move you
               forward.
             </p>
           </div>
+          <SignedOut>
 
-          <Link
-            href="/sign-in"
-            className="w-full sm:w-auto text-center py-2 px-4 bg-[#4D2E82] text-white font-medium rounded-lg shadow-inner shadow-[#2a1d5c] hover:bg-[#5f3791] transition"
-          >
-            Join the community
-          </Link>
+            <Link
+              href="/sign-in"
+              className="w-full sm:w-auto text-center py-2 px-4 bg-[#4D2E82] text-white font-medium rounded-lg shadow-inner shadow-[#2a1d5c] hover:bg-[#5f3791] transition"
+            >
+              Join the community
+            </Link>
+          </SignedOut>
+
+          <SignedIn>
+            <Link
+              href="/dashBoard"
+              className="w-full sm:w-auto text-center py-2 px-4 bg-[#4D2E82] text-white font-medium rounded-lg shadow-inner shadow-[#2a1d5c] hover:bg-[#5f3791] transition"
+            >
+              Go to Dashboard
+            </Link>
+
+          </SignedIn>
         </div>
 
         {/* Offerings grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mt-12">
           {offerings.map(({ title, desc }) => (
             <div key={title} className="flex items-start gap-4">
-              <img src="/images/mission/bar.svg" alt="bar" className='h-32'/>
+              <img src="/images/mission/bar.svg" alt="bar" className='h-32' />
               <div>
                 <h3 className="text-lg sm:text-xl font-semibold text-[#553888]">{title}</h3>
                 <p className="mt-2 text-[#535862] ">
-                {desc}</p>
+                  {desc}</p>
               </div>
             </div>
           ))}
