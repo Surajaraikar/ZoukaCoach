@@ -39,7 +39,7 @@ export default function CtaSection() {
             <Link
               href="/dashBoard"
               className="text-sm sm:text-base
-px-2 sm:px-4 py-1 sm:py-2
+px-4 py-2
   bg-white border border-gray-300 text-black font-medium 
   rounded-lg 
   shadow-inner shadow-[#d1d5db] 

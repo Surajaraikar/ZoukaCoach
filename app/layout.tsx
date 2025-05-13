@@ -67,7 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* only render when NOT on sign-in or sign-up or dashboard */}
           {!hideNav && !isDashboard && (
             <div className="border-b-2">
-              <header className="xl:max-w-screen-2xl md:w-5/6 mx-auto px-3 sm:px-0 flex items-center justify-between h-28">
+              <header className="xl:max-w-screen-2xl md:w-5/6 mx-auto px-5 flex items-center justify-between lg:py-6 py-2">
                 {/* Logo */}
                 <Link href="/">
                   <Image
@@ -77,19 +77,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     alt="logo"
                   />
                 </Link>
-                
+
                 {/* User navigation for all screens */}
                 <div className="flex items-center gap-2 sm:gap-4">
                   <SignedIn>
-                    <Link
+                    {/* <Link
                       href="/dashBoard"
                       className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 text-gray-800 font-medium hover:text-[#4D2E82]"
                     >
                       Dashboard
-                    </Link>
+                    </Link> */}
+
+            <Link
+              href="/dashBoard"
+              className="text-sm sm:text-base
+px-4 py-2
+  bg-white border border-gray-300 text-black font-medium 
+  rounded-lg 
+  shadow-inner shadow-[#d1d5db] 
+  hover:bg-[#f0f0f0]
+  text-center
+"
+            >
+              Dashboard
+            </Link>
                     <UserButton />
                   </SignedIn>
-                  
+
                   <SignedOut>
                     <Link
                       href="/sign-in"
