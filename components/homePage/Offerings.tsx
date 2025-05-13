@@ -29,16 +29,16 @@ export default function Offerings() {
   ];
 
   return (
-    <section className="section-width mt-10 mb-10 px-4 sm:px-6 lg:px-8">
-      <div className="py-6 sm:py-8 lg:py-12">
+    <section className="section-width margin-top margin-bottom">
+      <div className="">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6">
           <div>
             <span className="text-sm text-[#6941C6] font-medium">What we offer</span>
-            <h2 className="mt-2 text-black">
-              Your weekly anchor for clarity &amp; momentum
+            <h2 className="mt-2 sm:mt-4 text-black">
+            Your weekly anchor for clarity &amp; momentum
             </h2>
-            <p className="mt-4 text-[#535862] ">
+            <p className="mt-2 sm:mt-4 text-[#535862] ">
               Our offerings are designed to meet you where you are and gently move you
               forward.
             </p>

@@ -9,14 +9,14 @@ const Hero = () => {
     <div
       className="
         bg-[url('/images/home/home.png')] bg-center bg-cover 
-        h-[90vh] sm:h-[90vh]
+        h-[60vh] sm:h-[90vh]
       "
     >
       <div
         className="
           relative z-10 
           flex flex-col items-center text-center 
-          section-width px-4 sm:px-0 
+          section-width sm:px-0 
           pt-44 sm:pt-24 lg:pt-32 
           
         "
@@ -33,7 +33,7 @@ const Hero = () => {
           className="
             sm:mt-4 mt-2 
             text-[#7A64A6] 
-            w-full max-w-md sm:max-w-lg lg:max-w-xl
+            w-full max-w-sm sm:max-w-lg lg:max-w-xl
           "
         >
           Zouka coach helps you cut through the noise, reconnect with yourself,

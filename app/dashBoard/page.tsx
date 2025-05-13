@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Papa from "papaparse";
 import Image from "next/image";
 import { FaArrowRightLong } from "react-icons/fa6";
@@ -8,162 +8,287 @@ import { SignedIn, SignedOut, useUser, UserButton } from "@clerk/nextjs";
 import emailjs from "@emailjs/browser";
 import Link from "next/link";
 
+// [All previous interface definitions remain the same]
+
 export default function Home() {
   const { user } = useUser();
   const username = user?.username || user?.firstName || "User";
   const userEmail = user?.emailAddresses?.[0]?.emailAddress || "";
 
+  const [activeTab, setActiveTab] = useState<string>("classes");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [registeredSessions, setRegisteredSessions] = useState<string[]>([]);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [hiddenSessions, setHiddenSessions] = useState<string[]>([]);
+
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prevState => !prevState);
+  };
+
+
+  // Load registered and hidden sessions
   useEffect(() => {
-    if (userEmail) {
-      console.log("Logged-in user email:", userEmail);
+    try {
+      const saved = localStorage.getItem('registeredSessions');
+      if (saved) setRegisteredSessions(JSON.parse(saved));
+      const hidden = localStorage.getItem('hiddenSessions');
+      if (hidden) setHiddenSessions(JSON.parse(hidden));
+    } catch (e) {
+      console.error("Load error:", e);
     }
-  }, [userEmail]);
-
-  const [activeTab, setActiveTab] = useState("classes");
-  const [posts, setPosts] = useState([]);
-  const [sendingId, setSendingId] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    emailjs.init("8jK9d-6bvKySCa7oB");
   }, []);
 
+  // Persist registered sessions
+  useEffect(() => {
+    localStorage.setItem('registeredSessions', JSON.stringify(registeredSessions));
+  }, [registeredSessions]);
+
+  // Persist hidden sessions
+  useEffect(() => {
+    localStorage.setItem('hiddenSessions', JSON.stringify(hiddenSessions));
+  }, [hiddenSessions]);
+
+  // Parse time strings like "2:00 PM"
+  const parseTimeString = (timeString: string): Date | null => {
+    if (!timeString) return null;
+    const parts = timeString.match(/(\d+):(\d+)\s?(AM|PM|am|pm)/i);
+    if (!parts) return null;
+    let hour = parseInt(parts[1], 10);
+    const minute = parseInt(parts[2], 10);
+    const ampm = parts[3].toLowerCase();
+    if (ampm === 'pm' && hour < 12) hour += 12;
+    if (ampm === 'am' && hour === 12) hour = 0;
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+
+// Duration to minutes - Converts hours to minutes
+  const getDurationInMinutes = useCallback((durationString?: string): number => {
+    if (!durationString) return 60; // Default to 60 minutes
+    
+    // Try to extract hours
+    const hourMatch = durationString.match(/(\d+(?:\.\d+)?)\s*(?:hour|hr|h)/i);
+    if (hourMatch) {
+      return parseFloat(hourMatch[1]) * 60;
+    }
+    
+    // Try to extract minutes
+    const minuteMatch = durationString.match(/(\d+)\s*(?:minute|min|m)/i);
+    if (minuteMatch) {
+      return parseInt(minuteMatch[1], 10);
+    }
+    
+    // If no pattern matches but there's a number, assume it's minutes
+    const numericMatch = durationString.match(/(\d+)/);
+    if (numericMatch) {
+      return parseInt(numericMatch[1], 10);
+    }
+    
+    return 60; // Default fallback
+  }, []);
+
+  // Time to join window
+  const isTimeToJoin = useCallback((post: Post): boolean => {
+    const dateField = post.Date || post.date || post.data;
+    if (!dateField || !post.Time) return false;
+    const sessionDate = new Date(dateField);
+    if (isNaN(sessionDate.getTime())) return false;
+    const timeObj = parseTimeString(post.Time);
+    if (!timeObj) return false;
+    sessionDate.setHours(timeObj.getHours(), timeObj.getMinutes());
+    
+    // 15 minutes before session starts until session ends (using post.Session for duration)
+    const startWindow = new Date(sessionDate);
+    startWindow.setMinutes(startWindow.getMinutes() - 15);
+    
+    // Use post.Session for duration if available
+    let durationString = post.Session || post.Duration;
+    const duration = getDurationInMinutes(durationString);
+    const endWindow = new Date(sessionDate);
+    endWindow.setMinutes(endWindow.getMinutes() + duration);
+    
+    return currentTime >= startWindow && currentTime <= endWindow;
+  }, [currentTime, getDurationInMinutes]);
+
+  // Check if session ended
+  const isSessionEnded = useCallback((post: Post): boolean => {
+    const dateField = post.Date || post.date || post.data;
+    if (!dateField || !post.Time) return false;
+    const sessionDate = new Date(dateField);
+    if (isNaN(sessionDate.getTime())) return false;
+    const timeObj = parseTimeString(post.Time);
+    if (!timeObj) return false;
+    sessionDate.setHours(timeObj.getHours(), timeObj.getMinutes());
+    
+    // Use post.Session for duration if available, otherwise fall back to Duration
+    let durationString = post.Session || post.Duration;
+    const duration = getDurationInMinutes(durationString);
+    const endTime = new Date(sessionDate);
+    endTime.setMinutes(endTime.getMinutes() + duration);
+    
+    return currentTime > endTime;
+  }, [currentTime, getDurationInMinutes]);
+
+  // Hide ended sessions periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+      posts.forEach(post => {
+        if (
+          post.Link &&
+          registeredSessions.includes(post.Link) &&
+          isSessionEnded(post) &&
+          !hiddenSessions.includes(post.Link)
+        ) {
+          setHiddenSessions(prev => [...prev, post.Link!]);
+        }
+      });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [posts, registeredSessions, hiddenSessions, isSessionEnded]);
+
+  // Init EmailJS
+  useEffect(() => { emailjs.init("8jK9d-6bvKySCa7oB"); }, []);
+
+  // Load CSV
   useEffect(() => {
     const CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPkxnGc0F_waHNbZv5-aINw-9-dhRDEamrR-KP-qaBbV5wWj4J2yCdXhTPIQ_BeP6_W4FcyCGK-U-s/pub?output=csv";
-
     fetch(CSV_URL)
-      .then((r) => r.text())
-      .then((csvText) => {
-        Papa.parse(csvText, {
+      .then(r => r.text())
+      .then(csvText => {
+        Papa.parse<Post>(csvText, {
           header: true,
           skipEmptyLines: true,
-          dynamicTyping: false, // Keep dates as strings for proper handling
-          transformHeader: (header) => header.trim(), // Trim whitespace from headers
-          complete: ({ data }) => {
-            // Log the first row to help with debugging
-            if (data.length > 0) {
-              console.log("First row sample:", data[0]);
-            }
-            
-            // Process the data before setting it
-            const processedData = data.map(row => {
-              // Make a copy to avoid modifying the original data
-              const processedRow = {...row};
-              
-              // Make sure Date field exists and is properly formatted
-              if (processedRow.Date) {
-                processedRow.Date = processedRow.Date.trim();
-              }
-              
-              return processedRow;
-            });
-            
-            setPosts(processedData);
-          },
+          transformHeader: h => h.trim(),
+          complete: ({ data }) => setPosts(data),
         });
       })
-      .catch((err) => console.error("Failed to load sheet:", err));
+      .catch(err => console.error("CSV load error:", err));
   }, []);
 
-  const handleRegister = async (post) => {
-    // Check if Date field exists in the post object
-    const dateField = post.Date || post.date || post.data;
-    
-    if (!dateField) {
-      console.error("Date field not found in post:", post);
-      alert("Error: Date information is missing. Please contact support.");
-      return;
+  // Format date safely
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return "Date not available";
+    const clean = dateString.trim();
+    let d = new Date(clean);
+    if (isNaN(d.getTime())) {
+      const m = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) d = new Date(+m[1], +m[2] - 1, +m[3]);
     }
-    
-    // Use our robust formatDate function
-    const formattedDate = formatDate(dateField);
-    if (formattedDate === "Invalid date") {
-      console.error("Invalid date format in post:", post);
-      alert("Error: The date format is invalid. Please contact support.");
-      return;
-    }
+    if (isNaN(d.getTime())) return "Invalid date";
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  };
 
-    const templateParams = {
-      session_title: post.Title,
-      session_date: formattedDate,
+  // Handle registration
+  const handleRegister = async (post: Post) => {
+    const dateField = post.Date || post.date || post.data;
+    if (!dateField) {
+      alert("Error: Date missing.");
+      return;
+    }
+    const formatted = formatDate(dateField);
+    if (formatted === "Invalid date") {
+      alert("Error: Invalid date format.");
+      return;
+    }
+    
+    // If already registered, do nothing
+    if (post.Link && registeredSessions.includes(post.Link)) {
+      return;
+    }
+    
+    // Send registration email
+    const params: TemplateParams = {
+      session_title: post.Title || "Untitled Session",
+      session_date: formatted,
       session_time: post.Time,
       student_name: username,
       student_email: userEmail,
       coach_name: post.Name,
-      session_link: post.Link,
+      session_link: post.Link || "",
     };
-
-    setSendingId(post.Link);
-
+    
+    if (post.Link) setSendingId(post.Link);
     try {
-      await emailjs.send(
-        "service_vjgz4sn",
-        "template_61e5wss",
-        templateParams
-      );
+      await emailjs.send("service_vjgz4sn", "template_61e5wss", params);
       alert("Registration email sent!");
-      window.open(post.Link, "_blank");
+      
+      // Add to registered sessions if link exists
+      if (post.Link) {
+        setRegisteredSessions(prev => {
+          // Ensure no duplicates
+          if (!prev.includes(post.Link!)) {
+            return [...prev, post.Link!];
+          }
+          return prev;
+        });
+      }
     } catch (err) {
-      console.error("EmailJS error:", err);
-      alert("Failed to send registration email. Please try again.");
+      console.error(err);
+      alert("Failed to send email.");
     } finally {
       setSendingId(null);
     }
   };
+  // Tabs
+  const tabs: TabItem[] = [
+    { key: "classes", label: "Classes" },
+    { key: "games", label: "Games (coming soon)" },
+    { key: "cohorts", label: "Cohorts (coming soon)" },
+  ];
 
-  // Function to format date safely
-  const formatDate = (dateString) => {
-    try {
-      // Check if the dateString is valid
-      if (!dateString) return "Date not available";
-      
-      // Trim any whitespace that might be causing issues
-      const cleanDateString = dateString.toString().trim();
-      
-      // Try to parse the date directly first
-      let date = new Date(cleanDateString);
-      
-      // If that didn't work, try to parse it as YYYY-MM-DD specifically
-      if (isNaN(date.getTime())) {
-        // Check if it matches YYYY-MM-DD format
-        const dateParts = cleanDateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (dateParts) {
-          // JavaScript months are 0-indexed, so we subtract 1 from the month
-          date = new Date(
-            parseInt(dateParts[1]), 
-            parseInt(dateParts[2]) - 1, 
-            parseInt(dateParts[3])
-          );
-        }
-      }
-      
-      // Check if date is valid after our parsing attempts
-      if (isNaN(date.getTime())) {
-        console.warn("Unable to parse date:", cleanDateString);
-        return "Invalid date";
-      }
-      
-      return date.toLocaleDateString("en-US", {
-        // weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Date error";
-    }
+  // inside Home(), before your return:
+const getButtonProps = useCallback((post: Post) => {
+  const link = post.Link;
+  // Check if this post is currently being processed
+  const isSending = sendingId === link;
+  // Check if already registered
+  const isRegistered = !!(link && registeredSessions.includes(link));
+  const isJoinTime = isTimeToJoin(post);
+  
+  // Handling sending state
+  if (isSending) {
+    return {
+      text: "Sending...",
+      colorClass: "bg-yellow-500",
+      disabled: true,
+    };
+  }
+
+  // If registered and it's time to join
+  if (isRegistered && isJoinTime) {
+    return {
+      text: "Join Now",
+      colorClass: "bg-green-600 hover:bg-green-700",
+      disabled: false,
+    };
+  }
+
+  // If registered but not yet time to join
+  if (isRegistered) {
+    return {
+      text: "Registered",
+      colorClass: "bg-gray-400 hover:bg-gray-500",
+      disabled: false, // Keep it enabled as per requirement
+    };
+  }
+
+  // Default - not registered
+  return {
+    text: "Register",
+    colorClass: "bg-purple-600 hover:bg-purple-700",
+    disabled: false,
   };
+}, [registeredSessions, isTimeToJoin, sendingId]);
 
-  // Toggle sidebar for mobile view
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
+  // Return statement and render method remain the same as in the previous version
   return (
     <div className="flex flex-col min-h-screen bg-white xl:max-w-screen-2xl md:w-5/6 mx-auto">
-      
       {/* Mobile Menu Button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button 
@@ -172,8 +297,8 @@ export default function Home() {
         >
           {isSidebarOpen ? "✕" : "☰"}
         </button>
-      </div>
-
+      </div>     
+      
       <div className="flex flex-col lg:flex-row w-full">
         {/* Sidebar - hidden on mobile by default */}
         <div className={`
@@ -203,11 +328,7 @@ export default function Home() {
           <div className="space-y-4">
             <div className="text-sm text-gray-500">GENERAL</div>
             <ul className="space-y-2">
-              {[
-                { key: "classes", label: "Classes" },
-                { key: "games", label: "Games (coming soon)" },
-                { key: "cohorts", label: "Cohorts (coming soon)" },
-              ].map((tab) => (
+              {tabs.map((tab) => (
                 <li
                   key={tab.key}
                   onClick={() => {
@@ -234,10 +355,11 @@ export default function Home() {
             onClick={toggleSidebar}
           ></div>
         )}
-
-        {/* Main Content */}
+        
+        
         <div className="flex-1 py-6 lg:pl-6 text-black w-full lg:w-auto">
-          {/* Header */}
+
+                  {/* Header */}
           <div className="mb-8 md:mb-12 pt-8 lg:pt-1">
             <div className="flex items-center justify-between mb-2 mt-1">
               <div>
@@ -281,6 +403,7 @@ export default function Home() {
             </div>
           </div>
 
+
           {/* Tab Content */}
           <div className="mb-8 md:mb-12">
             {activeTab === "classes" && (
@@ -288,65 +411,98 @@ export default function Home() {
                 <h4 className="mb-4 text-lg md:text-xl font-medium">Upcoming live classes</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {posts.length > 0 ? (
-                    posts.map((post, i) => (
-                      <div key={i} className="bg-[#EFEBF7] px-5 pt-5 pb-3 rounded-xl">
-                        <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-gray-200  flex flex-col">
-                          <h4 className="font-normal text-lg mb-3 line-clamp-2">
-                            {post.Title || "Untitled Session"}
-                          </h4>
-                          <p className="text-[#535862] text-sm md:text-base mb-4 flex-grow overflow-hidden line-clamp-3">
-                            {post.Description || "No description available."}
-                          </p>
+                    posts.map((post, i) => {
+                      // Skip rendering this card if it's in the hidden sessions list
+                      if (post.Link && hiddenSessions.includes(post.Link)) {
+                        return null;
+                      }
+                      
+                      const buttonProps = getButtonProps(post);
+                      
+                      return (
+                        <div key={i} className="bg-[#EFEBF7] px-5 pt-5 pb-3 rounded-xl">
+                          <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-gray-200 flex flex-col">
+                            <h4 className="font-normal text-lg mb-3 line-clamp-2">
+                              {post.Title || "Untitled Session"}
+                            </h4>
+                            <p className="text-[#535862] text-sm md:text-base mb-4 flex-grow overflow-hidden line-clamp-3">
+                              {post.Description || "No description available."}
+                            </p>
 
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs md:text-sm text-gray-500 mb-3">
-                            <div className="mb-1 sm:mb-0">
-                              Date:{" "}
-                              <p className="font-medium text-[#535862] text-sm md:text-base mb-4 flex-grow overflow-hidden line-clamp-3">
-                                {formatDate(post.Date || post.date || post.data)}
-                              </p>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs md:text-sm text-gray-500 mb-3">
+                              <div className="mb-1 sm:mb-0">
+                                Date:{" "}
+                                <p className="font-medium text-[#535862] text-sm md:text-base mb-4 flex-grow overflow-hidden line-clamp-3">
+                                  {formatDate(post.Date || post.date || post.data || "")}
+                                </p>
+                              </div>
+                              <div>
+                                Time: <span className="font-medium">{post.Time}</span>
+                              </div>
                             </div>
-                            <div>
-                              Time: <span className="font-medium">{post.Time}</span>
+                            
+                            {post.Duration && (
+                              <div className="text-xs md:text-sm text-gray-500 mb-3">
+                                Duration: <span className="font-medium">{post.Duration}</span>
+                              </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {(post.Skills?.split(",") || []).map((skill, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs text-gray-500 px-2 py-1 bg-gray-200 rounded-full"
+                                >
+                                  {skill.trim()}
+                                </span>
+                              ))}
+                            </div>
+
+                            {post.Session && (
+                              <div className="text-xs md:text-sm text-gray-500 mb-3">
+                                Session: <span className="font-medium">{post.Session}</span>
+                              </div>
+                            )}
+
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto pt-3 border-t border-gray-100">
+                              <div className="flex items-center gap-2">
+                                <Image
+                                  src={'/images/dashBoard/girl.svg'}
+                                  alt={"instructor"}
+                                  width={40}
+                                  height={40}
+                                  className="rounded-full"
+                                />
+                                <p className="font-semibold text-sm">{post.Name}</p>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {(post.Skills?.split(",") || []).map((skill, idx) => (
-                              <span
-                                key={idx}
-                                className="text-xs text-gray-500 px-2 py-1 bg-gray-200 rounded-full"
-                              >
-                                {skill.trim()}
-                              </span>
-                            ))}
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto pt-3 border-t border-gray-100">
-                            <div className="flex items-center gap-2">
-                              <Image
-                                src={'/images/dashBoard/girl.svg'}
-                                alt={"instructor"}
-                                width={40}
-                                height={40}
-                                className="rounded-full"
-                              />
-                              <p className="font-semibold text-sm">{post.Name}</p>
-                            </div>
-                          </div>
+<div className="flex justify-end mt-3">
+  {post.Link && (
+    <button
+      onClick={() => {
+        // If it's join time and already registered, navigate to the link
+        if (isTimeToJoin(post) && registeredSessions.includes(post.Link)) {
+          window.open(post.Link, '_blank');
+        } else {
+          // Otherwise handle registration as before
+          handleRegister(post);
+        }
+      }}
+      disabled={buttonProps.disabled || isSessionEnded(post)}
+      className={`
+        ${buttonProps.colorClass}
+        ${isSessionEnded(post) ? 'bg-gray-300 opacity-50' : ''}
+        cursor-pointer disabled:opacity-50 text-white px-3 py-2 text-sm rounded-lg w-full sm:w-auto transition-colors
+      `}
+    >
+      {isSessionEnded(post) ? "Session Ended" : buttonProps.text}
+    </button>
+  )}
+</div>
                         </div>
-                        <div className="flex justify-end mt-3">
-                          {post.Link && (
-                            <button
-                              onClick={() => handleRegister(post)}
-                              disabled={sendingId === post.Link}
-                              className="bg-[#4D2E82] hover:bg-purple-800 cursor-pointer disabled:opacity-50 text-white px-3 py-2 text-sm rounded-lg w-full sm:w-auto transition-colors"
-                            >
-                              {sendingId === post.Link ? "Sending…" : "Register"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    }).filter(Boolean) // Filter out null elements (hidden sessions)
                   ) : (
                     <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex justify-center items-center py-12">
                       <div className="text-center">
@@ -375,8 +531,7 @@ export default function Home() {
                 </h2>
                 <p className="text-gray-600">More details about cohorts will be available soon.</p>
               </div>
-            )}
-          </div>
+            )}          </div>
         </div>
       </div>
     </div>

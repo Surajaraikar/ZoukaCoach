@@ -37,7 +37,7 @@ body {
 
 @layer components {
   .section-width {
-    @apply xl:max-w-screen-2xl md:w-5/6 mx-auto items-center;
+    @apply xl:max-w-screen-2xl md:w-5/6 w-11/12 mx-auto items-center;
   }
   .section-padding {
     @apply py-14 md:py-16 lg:py-20;
@@ -69,12 +69,16 @@ body {
   .section-width2 {
     @apply w-full max-w-screen-xl mx-auto px-4;
   }
+  
+  .link{
+    @apply xl:text-lg md:text-base sm:text-sm text-xs font-medium leading-relaxed;
+  }
 }
 
 
 @layer base {
   h1 {
-    @apply 2xl:text-[74px] xl:text-[64px] lg:text-[58px] md:text-[46px] text-4xl  md:tracking-[-1.92px] tracking-[-0.96px] leading-tight xl:leading-tight font-semibold 2xl:leading-tight;
+    @apply 2xl:text-[74px] xl:text-[64px] lg:text-[58px] md:text-[46px] text-[34px]  md:tracking-[-1.92px] tracking-[-0.96px] leading-tight xl:leading-tight font-semibold 2xl:leading-tight;
   }
 
   h2 {

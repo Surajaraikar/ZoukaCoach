@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const hideNav = ['/sign-in', '/sign-up', '/sign-in/factor-one'].includes(pathname);
   const isDashboard = pathname === '/dashBoard' || pathname.startsWith('/dashBoard/');
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Removed menuOpen state as hamburger menu is no longer needed
 
   return (
     <ClerkProvider>
@@ -66,8 +66,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           {/* only render when NOT on sign-in or sign-up or dashboard */}
           {!hideNav && !isDashboard && (
-            <div className="border-b-2 ">
-              <header className="xl:max-w-screen-2xl md:w-5/6 mx-auto flex items-center justify-between h-28 ">
+            <div className="border-b-2">
+              <header className="xl:max-w-screen-2xl md:w-5/6 mx-auto px-3 sm:px-0 flex items-center justify-between h-28">
                 {/* Logo */}
                 <Link href="/">
                   <Image
@@ -78,55 +78,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   />
                 </Link>
                 
-                {/* Hamburger (mobile) */}
-                <button
-                  aria-label="Toggle menu"
-                  className="md:hidden p-2 focus:outline-none"
-                  onClick={() => setMenuOpen(!menuOpen)}
-                >
-                  {/* simple hamburger icon */}
-                  <div className="space-y-1">
-                    <span className="block w-6 h-0.5 bg-gray-800"></span>
-                    <span className="block w-6 h-0.5 bg-gray-800"></span>
-                    <span className="block w-6 h-0.5 bg-gray-800"></span>
-                  </div>
-                </button>
-
-                {/* Navigation links */}
-                <nav
-                  className={`
-                    absolute top-20 left-0 w-full bg-white px-4 py-4 md:static md:flex md:w-auto md:py-0 md:px-0
-                    ${menuOpen ? 'flex flex-col gap-4' : 'hidden'}
-                    md:flex md:flex-row md:items-center md:gap-5
-                  `}
-                >
-                  {/* Dashboard button - only visible when signed in */}
+                {/* User navigation for all screens */}
+                <div className="flex items-center gap-2 sm:gap-4">
                   <SignedIn>
                     <Link
                       href="/dashBoard"
-                      className="block px-4 py-2 text-gray-800 font-medium hover:text-[#4D2E82]"
+                      className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 text-gray-800 font-medium hover:text-[#4D2E82]"
                     >
                       Dashboard
                     </Link>
+                    <UserButton />
                   </SignedIn>
-                  <SignedIn>
-              <UserButton />
-            </SignedIn>
+                  
                   <SignedOut>
                     <Link
                       href="/sign-in"
-                      className="block px-4 py-2 bg-[#4D2E82] text-white font-medium rounded-lg text-center shadow-inner shadow-[#2a1d5c] hover:bg-[#5f3791]"
+                      className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 bg-[#4D2E82] text-white font-medium rounded-lg text-center shadow-inner shadow-[#2a1d5c] hover:bg-[#5f3791]"
                     >
                       Login
                     </Link>
                     <Link
                       href="/sign-up"
-                      className="block p-2 bg-white border border-gray-300 font-medium text-black rounded-lg text-center shadow-inner shadow-[#d1d5db] hover:bg-[#f0f0f0]"
+                      className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 bg-white border border-gray-300 font-medium text-black rounded-lg text-center shadow-inner shadow-[#d1d5db] hover:bg-[#f0f0f0]"
                     >
                       Book a free session
                     </Link>
                   </SignedOut>
-                </nav>
+                </div>
+
+                {/* Empty - removed navigation links section as it's been consolidated above */}
               </header>
             </div>
           )}
