@@ -8,7 +8,42 @@ import { SignedIn, SignedOut, useUser, UserButton } from "@clerk/nextjs";
 import emailjs from "@emailjs/browser";
 import Link from "next/link";
 
-// [All previous interface definitions remain the same]
+// Define interfaces for TypeScript
+interface Post {
+  Title?: string;
+  Description?: string;
+  Date?: string;
+  date?: string;
+  data?: string;
+  Time?: string;
+  Duration?: string;
+  Skills?: string;
+  Session?: string;
+  Name?: string;
+  Link?: string;
+}
+
+interface TabItem {
+  key: string;
+  label: string;
+}
+
+// Use Record<string, unknown> to satisfy EmailJS parameter requirements
+interface TemplateParams extends Record<string, unknown> {
+  session_title: string;
+  session_date: string;
+  session_time?: string;
+  student_name: string;
+  student_email: string;
+  coach_name?: string;
+  session_link: string;
+}
+
+interface ButtonProps {
+  text: string;
+  colorClass: string;
+  disabled: boolean;
+}
 
 export default function Home() {
   const { user } = useUser();
@@ -27,7 +62,6 @@ export default function Home() {
   const toggleSidebar = () => {
     setIsSidebarOpen(prevState => !prevState);
   };
-
 
   // Load registered and hidden sessions
   useEffect(() => {
@@ -66,7 +100,7 @@ export default function Home() {
     return d;
   };
 
-// Duration to minutes - Converts hours to minutes
+  // Duration to minutes - Converts hours to minutes
   const getDurationInMinutes = useCallback((durationString?: string): number => {
     if (!durationString) return 60; // Default to 60 minutes
     
@@ -106,7 +140,7 @@ export default function Home() {
     startWindow.setMinutes(startWindow.getMinutes() - 15);
     
     // Use post.Session for duration if available
-    let durationString = post.Session || post.Duration;
+    const durationString = post.Session || post.Duration;
     const duration = getDurationInMinutes(durationString);
     const endWindow = new Date(sessionDate);
     endWindow.setMinutes(endWindow.getMinutes() + duration);
@@ -125,7 +159,7 @@ export default function Home() {
     sessionDate.setHours(timeObj.getHours(), timeObj.getMinutes());
     
     // Use post.Session for duration if available, otherwise fall back to Duration
-    let durationString = post.Session || post.Duration;
+    const durationString = post.Session || post.Duration;
     const duration = getDurationInMinutes(durationString);
     const endTime = new Date(sessionDate);
     endTime.setMinutes(endTime.getMinutes() + duration);
@@ -157,7 +191,7 @@ export default function Home() {
   // Load CSV
   useEffect(() => {
     const CSV_URL =
-      "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPkxnGc0F_waHNbZv5-aINw-9-dhRDEamrR-KP-qaBbV5wWj4J2yCdXhTPIQ_BeP6_W4FcyCGK-U-s/pub?output=csv";
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vReuoQ20VQ5IpBH9CGtdYf_rzxySB1u4K7jK3ou36GktAcWmvmMnt6KcPhqPmu4iXT7vHeBcLTgb3AY/pub?output=csv";
     fetch(CSV_URL)
       .then(r => r.text())
       .then(csvText => {
@@ -235,6 +269,7 @@ export default function Home() {
       setSendingId(null);
     }
   };
+  
   // Tabs
   const tabs: TabItem[] = [
     { key: "classes", label: "Classes" },
@@ -242,51 +277,51 @@ export default function Home() {
     { key: "cohorts", label: "Cohorts (coming soon)" },
   ];
 
-  // inside Home(), before your return:
-const getButtonProps = useCallback((post: Post) => {
-  const link = post.Link;
-  // Check if this post is currently being processed
-  const isSending = sendingId === link;
-  // Check if already registered
-  const isRegistered = !!(link && registeredSessions.includes(link));
-  const isJoinTime = isTimeToJoin(post);
-  
-  // Handling sending state
-  if (isSending) {
-    return {
-      text: "Sending...",
-      colorClass: "bg-yellow-500",
-      disabled: true,
-    };
-  }
+  // Get button properties based on post state
+  const getButtonProps = useCallback((post: Post): ButtonProps => {
+    const link = post.Link;
+    // Check if this post is currently being processed
+    const isSending = sendingId === link;
+    // Check if already registered
+    const isRegistered = !!(link && registeredSessions.includes(link));
+    const isJoinTime = isTimeToJoin(post);
+    
+    // Handling sending state
+    if (isSending) {
+      return {
+        text: "Sending...",
+        colorClass: "bg-yellow-500",
+        disabled: true,
+      };
+    }
 
-  // If registered and it's time to join
-  if (isRegistered && isJoinTime) {
+    // If registered and it's time to join
+    if (isRegistered && isJoinTime) {
+      return {
+        text: "Join Now",
+        colorClass: "bg-green-600 hover:bg-green-700",
+        disabled: false,
+      };
+    }
+
+    // If registered but not yet time to join
+    if (isRegistered) {
+      return {
+        text: "Registered",
+        colorClass: "bg-gray-400 hover:bg-gray-500",
+        disabled: false, // Keep it enabled as per requirement
+      };
+    }
+
+    // Default - not registered
     return {
-      text: "Join Now",
-      colorClass: "bg-green-600 hover:bg-green-700",
+      text: "Register",
+      colorClass: "bg-purple-600 hover:bg-purple-700",
       disabled: false,
     };
-  }
+  }, [registeredSessions, isTimeToJoin, sendingId]);
 
-  // If registered but not yet time to join
-  if (isRegistered) {
-    return {
-      text: "Registered",
-      colorClass: "bg-gray-400 hover:bg-gray-500",
-      disabled: false, // Keep it enabled as per requirement
-    };
-  }
-
-  // Default - not registered
-  return {
-    text: "Register",
-    colorClass: "bg-purple-600 hover:bg-purple-700",
-    disabled: false,
-  };
-}, [registeredSessions, isTimeToJoin, sendingId]);
-
-  // Return statement and render method remain the same as in the previous version
+  // Return statement and render method
   return (
     <div className="flex flex-col min-h-screen bg-white xl:max-w-screen-2xl md:w-5/6 mx-auto">
       {/* Mobile Menu Button */}
@@ -356,10 +391,8 @@ const getButtonProps = useCallback((post: Post) => {
           ></div>
         )}
         
-        
         <div className="flex-1 py-6 lg:pl-6 text-black w-full lg:w-auto">
-
-                  {/* Header */}
+          {/* Header */}
           <div className="mb-8 md:mb-12 pt-8 lg:pt-1">
             <div className="flex items-center justify-between mb-2 mt-1">
               <div>
@@ -402,7 +435,6 @@ const getButtonProps = useCallback((post: Post) => {
               </div>
             </div>
           </div>
-
 
           {/* Tab Content */}
           <div className="mb-8 md:mb-12">
@@ -448,7 +480,7 @@ const getButtonProps = useCallback((post: Post) => {
                             )}
 
                             <div className="flex flex-wrap gap-2 mb-4">
-                              {(post.Skills?.split(",") || []).map((skill, idx) => (
+                              {post.Skills?.split(",").map((skill, idx) => (
                                 <span
                                   key={idx}
                                   className="text-xs text-gray-500 px-2 py-1 bg-gray-200 rounded-full"
@@ -477,29 +509,29 @@ const getButtonProps = useCallback((post: Post) => {
                               </div>
                             </div>
                           </div>
-<div className="flex justify-end mt-3">
-  {post.Link && (
-    <button
-      onClick={() => {
-        // If it's join time and already registered, navigate to the link
-        if (isTimeToJoin(post) && registeredSessions.includes(post.Link)) {
-          window.open(post.Link, '_blank');
-        } else {
-          // Otherwise handle registration as before
-          handleRegister(post);
-        }
-      }}
-      disabled={buttonProps.disabled || isSessionEnded(post)}
-      className={`
-        ${buttonProps.colorClass}
-        ${isSessionEnded(post) ? 'bg-gray-300 opacity-50' : ''}
-        cursor-pointer disabled:opacity-50 text-white px-3 py-2 text-sm rounded-lg w-full sm:w-auto transition-colors
-      `}
-    >
-      {isSessionEnded(post) ? "Session Ended" : buttonProps.text}
-    </button>
-  )}
-</div>
+                          <div className="flex justify-end mt-3">
+                            {post.Link && (
+                              <button
+                                onClick={() => {
+                                  // If it's join time and already registered, navigate to the link
+                                  if (isTimeToJoin(post) && registeredSessions.includes(post.Link!)) {
+                                    window.open(post.Link, '_blank');
+                                  } else {
+                                    // Otherwise handle registration as before
+                                    handleRegister(post);
+                                  }
+                                }}
+                                disabled={buttonProps.disabled || isSessionEnded(post)}
+                                className={`
+                                  ${buttonProps.colorClass}
+                                  ${isSessionEnded(post) ? 'bg-gray-300 opacity-50' : ''}
+                                  cursor-pointer disabled:opacity-50 text-white px-3 py-2 text-sm rounded-lg w-full sm:w-auto transition-colors
+                                `}
+                              >
+                                {isSessionEnded(post) ? "Session Ended" : buttonProps.text}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     }).filter(Boolean) // Filter out null elements (hidden sessions)
@@ -531,7 +563,8 @@ const getButtonProps = useCallback((post: Post) => {
                 </h2>
                 <p className="text-gray-600">More details about cohorts will be available soon.</p>
               </div>
-            )}          </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
